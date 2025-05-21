@@ -50,40 +50,51 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
     checkBucketExists();
   }, [isDevelopmentEnvironment]);
 
+  const validateFiles = (selectedFiles: File[]): boolean => {
+    // Validate file types and sizes
+    const invalidFiles = selectedFiles.filter(file => {
+      const extension = '.' + file.name.split('.').pop()?.toLowerCase();
+      return !allowedTypes.includes(extension);
+    });
+
+    const oversizedFiles = selectedFiles.filter(
+      file => file.size > maxSize * 1024 * 1024
+    );
+
+    if (invalidFiles.length > 0) {
+      setError(`Invalid file type(s). Allowed types: ${allowedTypes.join(', ')}`);
+      return false;
+    }
+
+    if (oversizedFiles.length > 0) {
+      setError(`Files must be smaller than ${maxSize}MB`);
+      return false;
+    }
+
+    return true;
+  };
+
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
-      
-      // Validate file types and sizes
-      const invalidFiles = selectedFiles.filter(file => {
-        const extension = '.' + file.name.split('.').pop()?.toLowerCase();
-        return !allowedTypes.includes(extension);
-      });
 
-      const oversizedFiles = selectedFiles.filter(file => 
-        file.size > maxSize * 1024 * 1024
-      );
-
-      if (invalidFiles.length > 0) {
-        setError(`Invalid file type(s). Allowed types: ${allowedTypes.join(', ')}`);
-        return;
-      }
-
-      if (oversizedFiles.length > 0) {
-        setError(`Files must be smaller than ${maxSize}MB`);
-        return;
-      }
+      if (!validateFiles(selectedFiles)) return;
 
       setFiles(selectedFiles);
     }
   }, [allowedTypes, maxSize]);
 
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    setFiles(droppedFiles);
-  }, []);
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      setError(null);
+      if (!validateFiles(droppedFiles)) return;
+      setFiles(droppedFiles);
+    },
+    [allowedTypes, maxSize]
+  );
 
   const handleUpload = async () => {
     if (!user || !buildingId || files.length === 0) return;
