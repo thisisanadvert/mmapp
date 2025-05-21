@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase';
+
 export const debugAuth = async () => {
   try {
     const { data: session, error } = await supabase.auth.getSession();
